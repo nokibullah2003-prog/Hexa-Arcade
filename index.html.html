@@ -197,9 +197,9 @@ canvas#snake-board{border-radius:16px;box-shadow:0 0 40px rgba(0,0,0,.5);max-wid
 #snake-dice-area{display:flex;align-items:center;gap:1rem}
 
 /* ===== CHESS ===== */
-#chess-container{display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:700px}
+#chess-container{display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:780px}
 #chess-status{background:var(--card);padding:.5rem 1.5rem;border-radius:50px;font-weight:700}
-canvas#chess-board{border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);cursor:pointer;max-width:100%;max-height:80vh}
+canvas#chess-board{border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);cursor:pointer;max-width:100%;max-height:85vh}
 #chess-controls{display:flex;gap:.8rem}
 .chess-btn{padding:.5rem 1.2rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
   color:#fff;border-radius:50px;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;transition:background .2s;
@@ -359,7 +359,7 @@ canvas#carrom-board{border-radius:12px;box-shadow:0 0 40px rgba(0,0,0,.5);cursor
   <div class="game-content">
     <div id="chess-container">
       <div id="chess-status">White's Turn</div>
-      <canvas id="chess-board" width="640" height="640"></canvas>
+      <canvas id="chess-board" width="720" height="720"></canvas>
       <div id="chess-controls">
         <button class="chess-btn" onclick="initChess()">🔄 New Game</button>
         <button class="chess-btn" onclick="chessUndoMove()">↩ Undo</button>
@@ -1597,7 +1597,7 @@ function chessClick(e){
   const scaleY=canvas.height/rect.height;
   const mx=(e.clientX-rect.left)*scaleX;
   const my=(e.clientY-rect.top)*scaleY;
-  const cellSize=80,offset=0;
+  const cellSize=90,offset=0;
   const col=Math.floor((mx-offset)/cellSize);
   const row=Math.floor((my-offset)/cellSize);
   if(col<0||col>7||row<0||row>7)return;
@@ -1769,7 +1769,7 @@ function chessUndoMove(){
 // H emblem ONLY on the wide base disc. Bodies are clean Staunton silhouettes.
 // cx,cy = centre of the cell. All pieces are scaled to fit within the cell.
 function drawChessPiece(ctx, type, isWhite, cx, cy, cell){
-  const S = cell * 0.68;  // bigger pieces
+  const S = cell * 0.82;  // bigger pieces
   const baseY = cy + cell * 0.42;
   const fill   = isWhite ? '#f2ead8' : '#1c1610';
   const hi     = isWhite ? '#fffef8' : '#342e20';
@@ -1819,24 +1819,24 @@ function drawChessPiece(ctx, type, isWhite, cx, cy, cell){
     // Base bottom ellipse
     body(()=>ctx.ellipse(0,bBot,bw*0.96,S*0.048,0,0,Math.PI*2), shadow);
 
-    // ── Gold H emblem badge on base (exactly as in photo) ──
-    const ey = bTop*0.5; // vertically centred on base face
-    const R  = bw * 0.68; // much bigger badge
+    // ── Gold H emblem badge on base — sized to fit snugly inside disc ──
+    const ey = bTop * 0.52;        // vertically centred on base face
+    const R  = bw * 0.50;          // fits inside the disc with margin
     // Dark background circle
-    ctx.fillStyle='rgba(0,0,0,0.80)';
+    ctx.fillStyle='rgba(0,0,0,0.82)';
     ctx.beginPath(); ctx.arc(0,ey,R,0,Math.PI*2); ctx.fill();
-    // Gold outer ring — thick
-    ctx.strokeStyle='#d4a820'; ctx.lineWidth=R*0.16;
-    ctx.beginPath(); ctx.arc(0,ey,R*0.88,0,Math.PI*2); ctx.stroke();
-    // Fine inner dashed ring (ornate detail)
-    ctx.strokeStyle='#f0c840'; ctx.lineWidth=R*0.07; ctx.setLineDash([R*0.20,R*0.15]);
+    // Gold outer ring
+    ctx.strokeStyle='#d4a820'; ctx.lineWidth=R*0.13;
+    ctx.beginPath(); ctx.arc(0,ey,R*0.87,0,Math.PI*2); ctx.stroke();
+    // Inner dashed accent ring
+    ctx.strokeStyle='#f0c840'; ctx.lineWidth=R*0.055; ctx.setLineDash([R*0.18,R*0.14]);
     ctx.beginPath(); ctx.arc(0,ey,R*0.70,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
-    // Bold gold H — large and sharp
+    // Bold gold H — fills the inner circle cleanly
     ctx.fillStyle='#ffe030';
-    ctx.font=`900 ${R*1.30}px Georgia,serif`;
+    ctx.font=`900 ${R*1.08}px Georgia,serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.shadowColor='rgba(0,0,0,1)'; ctx.shadowBlur=5;
-    ctx.fillText('H', 0, ey+R*0.08); ctx.shadowBlur=0;
+    ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=3;
+    ctx.fillText('H', 0, ey+R*0.04); ctx.shadowBlur=0;
   }
 
   // ── Shared neck stem ──
@@ -1906,40 +1906,114 @@ function drawChessPiece(ctx, type, isWhite, cx, cy, cell){
   }
 
   // ════════════════════════════════════════
-  // KNIGHT — horse head profile facing right
+  // KNIGHT — accurate horse head profile facing right
   // ════════════════════════════════════════
   else if(p==='n'){
     // Neck connector to base
     drawNeck(S*0.115, -S*0.08, -S*0.14);
     collar(-S*0.08, S*0.175, S*0.052);
-    // Chest / lower neck block
-    body(()=>{
-      ctx.moveTo(-S*0.13,-S*0.14); ctx.lineTo(S*0.13,-S*0.14);
-      ctx.lineTo(S*0.17,-S*0.30); ctx.lineTo(S*0.10,-S*0.42);
-      ctx.lineTo(-S*0.10,-S*0.40); ctx.lineTo(-S*0.13,-S*0.28); ctx.closePath();
-    }, linG(0,-S*0.14,0,-S*0.42));
-    // Horse head (profile, facing right)
-    body(()=>{
-      ctx.moveTo(-S*0.08,-S*0.36);
-      ctx.bezierCurveTo(-S*0.14,-S*0.58, S*0.00,-S*0.72, S*0.16,-S*0.66);
-      ctx.bezierCurveTo(S*0.28,-S*0.58, S*0.26,-S*0.42, S*0.18,-S*0.34);
-      ctx.bezierCurveTo(S*0.10,-S*0.28, S*0.00,-S*0.26,-S*0.04,-S*0.30);
-      ctx.closePath();
-    }, radG(S*0.04,-S*0.52,S*0.22));
-    // Eye
-    ctx.fillStyle=isWhite?'#1a0e00':'#f0ddb0';
-    ctx.beginPath(); ctx.arc(S*0.14,-S*0.58,S*0.026,0,Math.PI*2); ctx.fill();
-    // Nostril
-    ctx.fillStyle=isWhite?'rgba(0,0,0,0.22)':'rgba(255,255,255,0.15)';
-    ctx.beginPath(); ctx.ellipse(S*0.16,-S*0.36,S*0.020,S*0.012,0.4,0,Math.PI*2); ctx.fill();
-    // Mane strokes
-    ctx.strokeStyle=isWhite?'rgba(120,90,20,0.4)':'rgba(255,255,255,0.12)'; ctx.lineWidth=1.3;
-    for(let m=0;m<3;m++){
-      ctx.beginPath(); ctx.moveTo(-S*0.02,-S*(0.40+m*0.08)); ctx.lineTo(S*0.08,-S*(0.36+m*0.08)); ctx.stroke();
+
+    ctx.save();
+    // Translate so horse head is well-centred in the cell
+    ctx.translate(S*0.02, 0);
+
+    const hFill = isWhite
+      ? ctx.createRadialGradient(-S*0.06,-S*0.52,S*0.02, S*0.04,-S*0.38,S*0.38)
+      : ctx.createRadialGradient(-S*0.06,-S*0.52,S*0.02, S*0.04,-S*0.38,S*0.38);
+    if(isWhite){
+      hFill.addColorStop(0,'#fffef5'); hFill.addColorStop(0.5,'#f2ead8'); hFill.addColorStop(1,'#9a8840');
+    } else {
+      hFill.addColorStop(0,'#342e20'); hFill.addColorStop(0.5,'#1c1610'); hFill.addColorStop(1,'#060402');
     }
-    // Shine
-    ctx.fillStyle=shine;
-    ctx.beginPath(); ctx.ellipse(S*0.06,-S*0.65,S*0.05,S*0.03,-0.4,0,Math.PI*2); ctx.fill();
+
+    // ── Neck / chest block ──
+    ctx.beginPath();
+    ctx.moveTo(-S*0.12,-S*0.13);
+    ctx.lineTo( S*0.10,-S*0.13);
+    ctx.lineTo( S*0.13,-S*0.30);
+    ctx.lineTo( S*0.06,-S*0.44);
+    ctx.lineTo(-S*0.10,-S*0.42);
+    ctx.lineTo(-S*0.13,-S*0.28);
+    ctx.closePath();
+    ctx.fillStyle = hFill; ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // ── Horse head — accurate Staunton profile facing RIGHT ──
+    // Head = wider at jaw, narrowing to muzzle pointing right, poll (top) arching left-back
+    ctx.beginPath();
+    // Start at base of neck (back of head, lower-left)
+    ctx.moveTo(-S*0.10, -S*0.42);
+    // Back of neck curving up to poll (top-left of head)
+    ctx.bezierCurveTo(-S*0.18,-S*0.52, -S*0.18,-S*0.64, -S*0.08,-S*0.72);
+    // Poll to ear tip (top, slightly right)
+    ctx.bezierCurveTo(-S*0.02,-S*0.76,  S*0.04,-S*0.77,  S*0.06,-S*0.73);
+    // Ear back down to forehead
+    ctx.bezierCurveTo( S*0.10,-S*0.70,  S*0.10,-S*0.66,  S*0.08,-S*0.63);
+    // Forehead curving forward to nose bridge
+    ctx.bezierCurveTo( S*0.12,-S*0.60,  S*0.20,-S*0.56,  S*0.22,-S*0.50);
+    // Nose bridge down to muzzle tip (rightmost point)
+    ctx.bezierCurveTo( S*0.24,-S*0.45,  S*0.25,-S*0.40,  S*0.24,-S*0.36);
+    // Muzzle bottom curving back under chin
+    ctx.bezierCurveTo( S*0.22,-S*0.32,  S*0.16,-S*0.30,  S*0.08,-S*0.32);
+    // Under chin connecting back to neck base
+    ctx.bezierCurveTo( S*0.02,-S*0.34, -S*0.04,-S*0.38, -S*0.10,-S*0.42);
+    ctx.closePath();
+    ctx.fillStyle = hFill; ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = 0.9; ctx.stroke();
+
+    // ── Ear (small upright triangle on poll) ──
+    ctx.beginPath();
+    ctx.moveTo(S*0.01,-S*0.73);
+    ctx.lineTo(S*0.06,-S*0.80);
+    ctx.lineTo(S*0.10,-S*0.73);
+    ctx.closePath();
+    ctx.fillStyle = isWhite ? '#e8dcc0' : '#2a2418';
+    ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = 0.7; ctx.stroke();
+    // Inner ear
+    ctx.beginPath();
+    ctx.moveTo(S*0.03,-S*0.73);
+    ctx.lineTo(S*0.06,-S*0.78);
+    ctx.lineTo(S*0.09,-S*0.73);
+    ctx.closePath();
+    ctx.fillStyle = isWhite ? 'rgba(180,100,80,0.35)' : 'rgba(180,80,60,0.25)';
+    ctx.fill();
+
+    // ── Eye — large, forward on face ──
+    // Eye white / iris base
+    const eyeX = S*0.12, eyeY = -S*0.60;
+    ctx.fillStyle = isWhite ? '#2a1a08' : '#d4b870';
+    ctx.beginPath(); ctx.ellipse(eyeX, eyeY, S*0.034, S*0.028, 0.2, 0, Math.PI*2); ctx.fill();
+    // Pupil
+    ctx.fillStyle = isWhite ? '#0a0500' : '#0a0500';
+    ctx.beginPath(); ctx.ellipse(eyeX+S*0.004, eyeY, S*0.016, S*0.022, 0.1, 0, Math.PI*2); ctx.fill();
+    // Eye highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath(); ctx.arc(eyeX-S*0.008, eyeY-S*0.010, S*0.008, 0, Math.PI*2); ctx.fill();
+
+    // ── Nostril on muzzle ──
+    ctx.fillStyle = isWhite ? 'rgba(0,0,0,0.20)' : 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.ellipse(S*0.21, -S*0.38, S*0.022, S*0.014, 0.5, 0, Math.PI*2); ctx.fill();
+
+    // ── Mane — flowing strokes from poll down the neck ──
+    const maneCol = isWhite ? 'rgba(110,80,15,0.50)' : 'rgba(255,255,255,0.14)';
+    ctx.strokeStyle = maneCol; ctx.lineWidth = 2.2; ctx.lineCap='round';
+    const maneStrokes=[
+      [[-S*0.06,-S*0.71],[-S*0.14,-S*0.62],[-S*0.16,-S*0.52],[-S*0.12,-S*0.44]],
+      [[-S*0.04,-S*0.70],[-S*0.10,-S*0.60],[-S*0.12,-S*0.50],[-S*0.08,-S*0.43]],
+      [[ S*0.00,-S*0.68],[-S*0.05,-S*0.58],[-S*0.07,-S*0.50],[-S*0.04,-S*0.43]],
+    ];
+    maneStrokes.forEach(pts=>{
+      ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+      ctx.stroke();
+    });
+
+    // ── Cheek sheen highlight ──
+    ctx.fillStyle = shine;
+    ctx.beginPath(); ctx.ellipse(S*0.06,-S*0.66, S*0.06, S*0.038,-0.4,0,Math.PI*2); ctx.fill();
+
+    ctx.restore();
     drawBase(S*0.40);
   }
 
@@ -2038,7 +2112,7 @@ function drawChess(){
   const canvas=document.getElementById('chess-board');
   const ctx=canvas.getContext('2d');
   const W=canvas.width,H=canvas.height;
-  const cellSize=80;
+  const cellSize=90;
   ctx.clearRect(0,0,W,H);
 
   // Board with subtle wood grain
