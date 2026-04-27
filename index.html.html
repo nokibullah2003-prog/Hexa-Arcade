@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -533,10 +534,10 @@ function ludoHomePos(player, ti){
 function ludoHomeStretch(player, step){
   // step 0-4: 5 cells leading to center
   const paths = [
-    [[7,13],[7,12],[7,11],[7,10],[7,9]], // Red: col7 going up
-    [[1,7],[2,7],[3,7],[4,7],[5,7]],     // Green: row7 going right
-    [[7,1],[7,2],[7,3],[7,4],[7,5]],     // Blue: col7 going down
-    [[13,7],[12,7],[11,7],[10,7],[9,7]], // Yellow: row7 going left
+    [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]], // Red: col7 going up → center row8
+    [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],     // Green: row7 going right → center col6
+    [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],     // Blue: col7 going down → center row6
+    [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]], // Yellow: row7 going left → center col8
   ];
   const [col,row] = paths[player][step];
   return cellPx(col, row);
@@ -738,7 +739,7 @@ function ludoRollDice(){
     const canMove = tokens.some(t=>{
       if(t.pos === -1) return val === 6;
       if(t.pos >= 200) return false;
-      if(t.pos >= 100){ const step = t.pos-100; return step+val <= 4; }
+      if(t.pos >= 100){ const step = t.pos-100; return step+val <= 5; }
       return true;
     });
     if(!canMove){
@@ -747,68 +748,110 @@ function ludoRollDice(){
     } else {
       document.getElementById('ludo-status').textContent = `${LUDO.NAMES[cp]} rolled ${val} -- Click a token!`;
       document.getElementById('ludo-board').onclick = ludoTokenClick;
+      document.getElementById('ludo-board').ontouchend = ludoTokenClick;
     }
     drawLudo();
   });
 }
 
-function ludoTokenClick(e){
+// Unified pointer→canvas coords for both mouse and touch
+function ludoGetCanvasXY(e){
   const canvas = document.getElementById('ludo-board');
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width/rect.width;
-  const scaleY = canvas.height/rect.height;
-  const mx = (e.clientX-rect.left)*scaleX;
-  const my = (e.clientY-rect.top)*scaleY;
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  let clientX, clientY;
+  if(e.touches && e.touches.length > 0){
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else if(e.changedTouches && e.changedTouches.length > 0){
+    clientX = e.changedTouches[0].clientX;
+    clientY = e.changedTouches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  return { mx: (clientX - rect.left) * scaleX, my: (clientY - rect.top) * scaleY };
+}
+
+function ludoTokenClick(e){
+  if(e.cancelable) e.preventDefault();
+  const { mx, my } = ludoGetCanvasXY(e);
+  const canvas = document.getElementById('ludo-board');
   const cp = ludoState.currentPlayer;
   const tokens = ludoState.tokens[cp];
   const val = ludoState.diceVal;
 
+  // Hit radius: large enough for comfortable finger tap
+  const HIT = CS * 1.4;
+
+  // Find the closest valid token within hit radius
+  let bestDist = Infinity, bestTi = -1;
   for(let ti=0;ti<4;ti++){
     const t = tokens[ti];
     let px, py;
     if(t.pos === -1){
-      const hp = ludoHomePos(cp,ti); px=hp.x; py=hp.y;
+      const hp = ludoTokenSlotPos(cp,ti); px=hp.x; py=hp.y;
     } else if(t.pos >= 200){ continue; }
     else if(t.pos >= 100){
       const step = t.pos-100;
       const sp = ludoHomeStretch(cp,step); px=sp.x; py=sp.y;
     } else {
-      const bp = ludoBoardCell(cp,t.pos); px=bp.x; py=bp.y;
+      const bp = ludoBoardCell(cp,t.pos);
+      px=bp.x+(ti%2===0?-5:5); py=bp.y+(ti<2?-5:5);
     }
-    if(Math.hypot(mx-px, my-py) < CS*0.65){
-      // Try to move this token
-      if(t.pos === -1 && val === 6){
-        t.pos = 0;
-        document.getElementById('ludo-status').textContent = `${LUDO.NAMES[cp]} enters the board!`;
-      } else if(t.pos >= 100){
+    const dist = Math.hypot(mx-px, my-py);
+    if(dist < HIT && dist < bestDist){
+      // Check this token is actually moveable
+      if(t.pos === -1 && val !== 6) continue;
+      if(t.pos >= 100){
         const step = t.pos-100;
-        if(step+val > 4){ document.getElementById('ludo-status').textContent = `Exact number needed!`; return; }
-        t.pos = 100 + step + val;
-        if(t.pos === 104){ t.pos=200; ludoState.scores[cp]++;
-          document.getElementById('ludo-status').textContent = `${LUDO.NAMES[cp]} token HOME! 🎉`;
-          if(ludoState.scores[cp]===4){
-            document.getElementById('ludo-status').textContent = `🏆 ${LUDO.NAMES[cp]} WINS!`;
-            canvas.onclick=null; drawLudo(); updateLudoInfo(); return;
-          }
-        }
-      } else if(t.pos >= 0){
+        if(step+val > 5) continue;
+      }
+      if(t.pos >= 0 && t.pos < 100){
         const newPos = t.pos + val;
         if(newPos >= 52){
-          // Enter home stretch
           const overflow = newPos - 52;
-          if(overflow <= 4){ t.pos = 100 + overflow; }
-          else { document.getElementById('ludo-status').textContent = `${LUDO.NAMES[cp]} needs exact roll!`; return; }
-        } else {
-          t.pos = newPos;
-          ludoCheckCapture(cp, newPos);
+          if(overflow > 5) continue;
         }
-      } else { continue; }
-      drawLudo(); updateLudoInfo();
-      canvas.onclick = null;
-      setTimeout(()=>ludoNextTurn(val!==6), 500);
-      return;
+      }
+      bestDist = dist;
+      bestTi = ti;
     }
   }
+
+  if(bestTi === -1) return; // no valid token tapped
+
+  // Move the best matched token
+  const t = tokens[bestTi];
+  if(t.pos === -1 && val === 6){
+    t.pos = 0;
+    document.getElementById('ludo-status').textContent = `${LUDO.NAMES[cp]} enters the board!`;
+  } else if(t.pos >= 100){
+    const step = t.pos - 100;
+    t.pos = 100 + step + val;
+    if(t.pos === 105){
+      t.pos = 200; ludoState.scores[cp]++;
+      document.getElementById('ludo-status').textContent = `${LUDO.NAMES[cp]} token HOME! 🎉`;
+      if(ludoState.scores[cp] === 4){
+        document.getElementById('ludo-status').textContent = `🏆 ${LUDO.NAMES[cp]} WINS!`;
+        canvas.onclick = null; canvas.ontouchend = null;
+        drawLudo(); updateLudoInfo(); return;
+      }
+    }
+  } else if(t.pos >= 0){
+    const newPos = t.pos + val;
+    if(newPos >= 52){
+      const overflow = newPos - 52;
+      t.pos = 100 + overflow;
+    } else {
+      t.pos = newPos;
+      ludoCheckCapture(cp, newPos);
+    }
+  }
+  drawLudo(); updateLudoInfo();
+  canvas.onclick = null; canvas.ontouchend = null;
+  setTimeout(()=>ludoNextTurn(val !== 6), 500);
 }
 
 function ludoCheckCapture(cp, pos){
@@ -984,6 +1027,18 @@ function drawLudo(){
         px=bp.x+(ti%2===0?-5:5); py=bp.y+(ti<2?-5:5);
       }
 
+      // ---- Highlight moveable tokens with a pulsing outer ring ----
+      const cp2 = ludoState.currentPlayer;
+      const val2 = ludoState.diceVal;
+      const isMoveable = ludoState.rolled && p === cp2 && (()=>{
+        if(t.pos === -1) return val2 === 6;
+        if(t.pos >= 200) return false;
+        if(t.pos >= 100){ const step = t.pos-100; return step+val2 <= 5; }
+        const newPos = t.pos + val2;
+        if(newPos >= 52){ return (newPos-52) <= 5; }
+        return true;
+      })();
+
       // ---- Realistic wooden H-token with bold player-colour outline ----
       const r = CS * 0.38;
       const tokenColors = [
@@ -1001,7 +1056,16 @@ function drawLudo(){
       ctx.save();
       ctx.translate(px, py);
 
-      // Drop shadow
+      // Pulsing tap-me ring for moveable tokens
+      if(isMoveable){
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 180);
+        ctx.shadowBlur = 18 + pulse * 14;
+        ctx.shadowColor = '#ffffff';
+        ctx.strokeStyle = `rgba(255,255,255,${0.55 + pulse * 0.45})`;
+        ctx.lineWidth = 4 + pulse * 3;
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.55, 0, Math.PI*2); ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
       ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowOffsetY = 4;
 
       // Main body gradient
@@ -1432,7 +1496,7 @@ function drawSnake(){
   // Helper to draw one snake/ladder token at (px,py) with scale
   function drawSnakeToken(px, py, i, scale){
     const tc=snakeTokenColors[i];
-    const r=10*scale;
+    const r=16*scale;
     ctx.save();
     ctx.translate(px,py);
 
@@ -2208,10 +2272,11 @@ function carromAnimate(){
     requestAnimationFrame(carromAnimate);
   } else {
     s.animating=false;
-    // Reset striker
+    // Reset striker to the correct side for the next player
     s.striker.active=true;
+    const nextPlayer=(s.current+1)%s.players; // who will be next after turn switch below
     s.striker.x=C_W/2;
-    s.striker.y=C_H/2+150;
+    s.striker.y=nextPlayer===0 ? C_H/2+150 : C_H/2-150;
     s.striker.vx=0;s.striker.vy=0;
     
     // Next turn
