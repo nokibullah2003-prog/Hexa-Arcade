@@ -1705,7 +1705,7 @@ function initSnake(numPlayers){
     : ['Red','Green','Blue','Yellow'];
   const allColors = ['#c0392b','#27ae60','#2471a3','#d4ac0d'];
   const canvas=document.getElementById('snake-board');
-  canvas.width=560;canvas.height=560;
+  canvas.width=560;canvas.height=620;
   snakeState={
     players:numPlayers,
     positions:Array(numPlayers).fill(0),
@@ -1837,9 +1837,13 @@ function snakeAnimateMove(playerIdx, fromCell, toCell, type, onDone){
 
 function snakeCellPos(n){
   const CW=50,CH=50,MX=10,MY=10;
+  // Position 0 = start area just below cell 1 (bottom-RIGHT of board)
+  if(n===0) return {x:MX+9*CW+CW/2, y:MY+10*CH+18+28};
   const row=Math.floor((n-1)/10);
   let col=(n-1)%10;
-  if(row%2===1)col=9-col;
+  // Board draws bottom row (visual r=9, odd) right-to-left: cell 1 at right (c=9), cell 10 at left (c=0)
+  // row 0 corresponds to visual r=9 (odd) → flip; row 1 → visual r=8 (even) → no flip; etc.
+  if(row%2===0) col=9-col;
   // row 0 = bottom (cells 1-10), row 9 = top (cells 91-100)
   return{x:MX+col*CW+CW/2, y:MY+(9-row)*CH+CH/2};
 }
@@ -1901,6 +1905,25 @@ function drawSnake(){
   ctx.strokeRect(MX-9,MY-9,CW*10+18,CH*10+18);
   ctx.strokeStyle='#5a3a08';ctx.lineWidth=1;
   ctx.strokeRect(MX-12,MY-12,CW*10+24,CH*10+24);
+
+  // ---- START zone below board ----
+  const startY=MY+10*CH+18;
+  ctx.fillStyle='rgba(100,60,10,0.18)';
+  ctx.beginPath();ctx.roundRect(MX-6,startY,CW*10+12,55,8);ctx.fill();
+  ctx.strokeStyle='rgba(120,80,20,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.roundRect(MX-6,startY,CW*10+12,55,8);ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrow pointing up toward cell 1 (right side)
+  const arrowX=MX+9*CW+CW/2;
+  ctx.strokeStyle='rgba(70,40,8,0.55)';ctx.lineWidth=2;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(arrowX,startY+4);ctx.lineTo(arrowX,startY-6);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(70,40,8,0.55)';
+  ctx.beginPath();ctx.moveTo(arrowX,startY-10);ctx.lineTo(arrowX-5,startY-2);ctx.lineTo(arrowX+5,startY-2);ctx.closePath();ctx.fill();
+  // START text aligned right
+  ctx.fillStyle='rgba(70,40,8,0.75)';ctx.font='bold 13px Georgia,serif';
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  ctx.fillText('🏁 START HERE →',arrowX+2,startY+28);
 
   // ---- Draw LADDERS (wooden illustrated style) ----
   Object.entries(LADDERS).forEach(([bot,top])=>{
@@ -2101,9 +2124,8 @@ function drawSnake(){
 
   const offsets=[[-11,-11],[11,-11],[-11,11],[11,11]];
 
-  // Draw static tokens (skip the one currently being animated)
+  // Draw static tokens (including at start position 0)
   snakeState.positions.forEach((pos,i)=>{
-    if(pos===0)return;
     if(snakeState.animToken&&snakeState.animToken.playerIdx===i)return; // skip — drawn separately below
     const p=snakeCellPos(pos);
     const px=p.x+offsets[i][0], py=p.y+offsets[i][1];
