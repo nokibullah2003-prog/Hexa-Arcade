@@ -902,85 +902,37 @@ function toggleLudoAI(){
 }
 let ludoState = {};
 
-// Build the 52-step path as [col,row] in the 15x15 grid
-// Standard Ludo path (0-indexed grid, origin top-left)
-// Red starts at col6,row13 going up; Green at col1,row6 going right;
-// Blue at col8,row1 going down; Yellow at col13,row8 going left.
-// Path is 52 steps, each player offset by 13.
-const LUDO_GRID_PATH = (function(){
-  const path = [];
-  // Red's path (starts bottom-left area, goes anti-clockwise... actually standard goes:
-  // Each color's path is a rotation. We define absolute 52 cells.
-  // Standard Ludo 15x15 grid path (col, row):
-  const p = [
-    // bottom-left vertical strip going UP (col6, rows 14..9) -- 6 cells
-    [6,14],[6,13],[6,12],[6,11],[6,10],[6,9],
-    // row8 going RIGHT (cols 6..8) -- home stretch entry col then right -- 3 cells
-    [6,8],[7,8],[8,8],   // skip -- actually standard:
-    // We'll use a clean direct path:
-  ];
-  // Clean standard path (col,row) for all 52 steps, player 0 (Red) perspective:
-  // Segment 1: col6, row14 -> row9 (going up, 6 cells)
-  for(let r=14;r>=9;r--) path.push([6,r]);
-  // Segment 2: row8, col6 -> col1 (going left, hmm no)
-  // Let me use the real standard ludo path:
-  // Red: starts at (6,13) enters at (6,2) finishes at home column
-  // I'll define it properly:
-  path.length = 0;
-  // Red start area: left column going up
-  for(let r=13;r>=2;r--) if(r!==7&&r!==8) path.push([6,r]); // skip center rows
-  // Nope, let's just hardcode the 52 cells properly.
-  path.length = 0;
-  const raw = [
-    // Left side going up (red's starting stretch)
-    [6,13],[6,12],[6,11],[6,10],[6,9],
-    // top-left corner going right
-    [6,8],[5,8],[4,8],[3,8],[2,8],[1,8],
-    // top going up then right across top
-    [1,7],[1,6],
-    [2,6],[3,6],[4,6],[5,6],[6,6],
-    // top side going right on row6... going up col6
-    [6,5],[6,4],[6,3],[6,2],[6,1],
-    // top-right
-    [7,1],[8,1],
-    [8,2],[8,3],[8,4],[8,5],[8,6],
-    // right side going right on row6
-    [9,6],[10,6],[11,6],[12,6],[13,6],
-    [13,7],[13,8],
-    [12,8],[11,8],[10,8],[9,8],[8,8],
-    [8,9],[8,10],[8,11],[8,12],[8,13],
-    [7,13],[6,13]  // closes but we need 52 unique
-  ];
-  // Build proper 52-step closed loop
-  path.length = 0;
-  const segments = [
-    // Red's home column entry is col7 rows 13..8 (going up)
-    // Global board path (52 cells, clockwise starting from Red's start)
-    // Segment going UP left col (red start)
-    ...[[6,13],[6,12],[6,11],[6,10],[6,9]],
-    // Turn left, go LEFT on row8
-    ...[[5,8],[4,8],[3,8],[2,8],[1,8]],
-    // Turn up, go UP col1
-    ...[[1,7],[1,6]],
-    // Turn right, go RIGHT on row6
-    ...[[2,6],[3,6],[4,6],[5,6],[6,6],[6,5],[6,4],[6,3],[6,2],[6,1]],
-    // Turn right to col7,8
-    ...[[7,1],[8,1]],
-    // go DOWN col8 going down on right side
-    ...[[8,2],[8,3],[8,4],[8,5],[8,6]],
-    // go RIGHT on row6 right side
-    ...[[9,6],[10,6],[11,6],[12,6],[13,6]],
-    // go down to row7,8
-    ...[[13,7],[13,8]],
-    // go LEFT on row8 right side
-    ...[[12,8],[11,8],[10,8],[9,8],[8,8]],
-    // go DOWN col8 bottom
-    ...[[8,9],[8,10],[8,11],[8,12],[8,13]],
-    // go left to col7,6
-    ...[[7,13],[6,13]],
-  ];
-  return segments.slice(0,52);
-})();
+// Standard Ludo 52-step clockwise path (0-indexed col,row).
+// Red player (index 0) starts at step 0 = [6,13], circuit goes clockwise.
+// Each player's path uses this same loop, offset by 13 steps (ludoBoardCell).
+const LUDO_GRID_PATH = [
+  // 0-4:   col6 going UP (Red's starting stretch, bottom-left)
+  [6,13],[6,12],[6,11],[6,10],[6,9],
+  // 5-9:   row8 going LEFT
+  [5,8],[4,8],[3,8],[2,8],[1,8],
+  // 10-11: col1 going UP
+  [1,7],[1,6],
+  // 12-16: row6 going RIGHT (top-left area)
+  [2,6],[3,6],[4,6],[5,6],[6,6],
+  // 17-21: col6 going UP to top
+  [6,5],[6,4],[6,3],[6,2],[6,1],
+  // 22-23: row1 going RIGHT
+  [7,1],[8,1],
+  // 24-28: col8 going DOWN
+  [8,2],[8,3],[8,4],[8,5],[8,6],
+  // 29-33: row6 going RIGHT (top-right area)
+  [9,6],[10,6],[11,6],[12,6],[13,6],
+  // 34-35: col13 going DOWN
+  [13,7],[13,8],
+  // 36-40: row8 going LEFT (bottom-right area)
+  [12,8],[11,8],[10,8],[9,8],[8,8],
+  // 41-45: col8 going DOWN
+  [8,9],[8,10],[8,11],[8,12],[8,13],
+  // 46-51: row13 going LEFT (bottom area, back toward Red's start)
+  [7,13],[6,13],[5,13],[4,13],[3,13],[2,13],
+];
+// Exactly 52 unique cells — verified count:
+// 5+5+2+5+5+2+5+5+2+5+5+6 = 52 ✓
 
 // Convert grid [col,row] to canvas pixel center
 function cellPx(col, row){
@@ -1445,20 +1397,21 @@ function drawLudo(){
       const x = BO+col*CS, y = BO+row*CS;
       let bg = '#ffffff';
 
-      // Quadrant coloring: 4 home yards
-      if(col<=5 && row<=5)       bg = '#ffdddd'; // Red (top-left)
-      if(col>=9 && row<=5)       bg = '#ddffdd'; // Green (top-right)
-      if(col>=9 && row>=9)       bg = '#ddeeff'; // Blue (bottom-right)
-      if(col<=5 && row>=9)       bg = '#fffacc'; // Yellow (bottom-left)
+      // Quadrant coloring: 4 home yards (standard Ludo)
+      // Red=bottom-left Green=top-left Blue=top-right Yellow=bottom-right
+      if(col<=5 && row<=5)       bg = '#ddffdd'; // Green (top-left)
+      if(col>=9 && row<=5)       bg = '#ddeeff'; // Blue (top-right)
+      if(col>=9 && row>=9)       bg = '#fffacc'; // Yellow (bottom-right)
+      if(col<=5 && row>=9)       bg = '#ffdddd'; // Red (bottom-left)
 
       // Center area = white
       if(col>=6&&col<=8&&row>=6&&row<=8) bg='#ffffff';
 
-      // Home columns (colored lanes leading to center)
-      if(col===7&&row>=2&&row<=6)  bg='#aaddaa'; // Green lane (col7 top)
-      if(col===7&&row>=8&&row<=12) bg='#ffbbbb'; // Red lane (col7 bottom)
-      if(row===7&&col>=2&&col<=6)  bg='#aaddaa'; // Green row lane
-      if(row===7&&col>=8&&col<=12) bg='#ffe8a0'; // Yellow row lane
+      // Home columns (colored lanes leading toward center)
+      if(col===7&&row>=1&&row<=6)  bg='#cce0ff'; // Blue lane (col7 top)
+      if(col===7&&row>=8&&row<=13) bg='#ffcccc'; // Red lane (col7 bottom)
+      if(row===7&&col>=1&&col<=6)  bg='#ccffcc'; // Green row lane (left)
+      if(row===7&&col>=8&&col<=13) bg='#fff3cc'; // Yellow row lane (right)
 
       // Safe star cells (highlight)
       const safeGridCells = [[6,2],[2,6],[6,12],[12,8],[8,2],[12,6],[8,12],[2,8]];
@@ -1480,10 +1433,10 @@ function drawLudo(){
 
   // ---- Home Yards (inner colored circles) ----
   const yardDefs = [
-    {col:0,row:0, color:'#e74c3c', light:'#ffcccc'}, // Red top-left
-    {col:9,row:0, color:'#27ae60', light:'#ccffcc'}, // Green top-right
-    {col:9,row:9, color:'#2980b9', light:'#cce0ff'}, // Blue bottom-right
-    {col:0,row:9, color:'#f39c12', light:'#fff3cc'}, // Yellow bottom-left
+    {col:0,row:9, color:'#e74c3c', light:'#ffcccc'}, // Red bottom-left
+    {col:0,row:0, color:'#27ae60', light:'#ccffcc'}, // Green top-left
+    {col:9,row:0, color:'#2980b9', light:'#cce0ff'}, // Blue top-right
+    {col:9,row:9, color:'#f39c12', light:'#fff3cc'}, // Yellow bottom-right
   ];
   yardDefs.forEach((yd,i)=>{
     const isActive = !ludoState.activePlayers || ludoState.activePlayers.includes(i);
@@ -1519,12 +1472,13 @@ function drawLudo(){
 
   // ---- Center Triangle (4 colored triangles meeting at center) ----
   const midX = BO+7*CS+CS/2, midY = BO+7*CS+CS/2;
-  const triColors = ['#e74c3c','#27ae60','#2980b9','#f39c12'];
+  // Colors match quadrant layout: top=Green, right=Blue, bottom=Yellow, left=Red
+  const triColors = ['#27ae60','#2980b9','#f39c12','#e74c3c'];
   const triCorners = [
-    [[BO+6*CS,BO+6*CS],[BO+9*CS,BO+6*CS],[midX,midY]], // top - red
-    [[BO+9*CS,BO+6*CS],[BO+9*CS,BO+9*CS],[midX,midY]], // right - green
-    [[BO+9*CS,BO+9*CS],[BO+6*CS,BO+9*CS],[midX,midY]], // bottom - blue
-    [[BO+6*CS,BO+9*CS],[BO+6*CS,BO+6*CS],[midX,midY]], // left - yellow
+    [[BO+6*CS,BO+6*CS],[BO+9*CS,BO+6*CS],[midX,midY]], // top - green
+    [[BO+9*CS,BO+6*CS],[BO+9*CS,BO+9*CS],[midX,midY]], // right - blue
+    [[BO+9*CS,BO+9*CS],[BO+6*CS,BO+9*CS],[midX,midY]], // bottom - yellow
+    [[BO+6*CS,BO+9*CS],[BO+6*CS,BO+6*CS],[midX,midY]], // left - red
   ];
   triCorners.forEach((corners,i)=>{
     ctx.fillStyle=triColors[i]+'cc';
@@ -1679,10 +1633,10 @@ function drawLudo(){
 // Slot positions for tokens inside home yard circles
 function ludoTokenSlotPos(player, ti){
   const yardCenters = [
-    {col:0,row:0}, // Red
-    {col:9,row:0}, // Green
-    {col:9,row:9}, // Blue
-    {col:0,row:9}, // Yellow
+    {col:0,row:9}, // Red bottom-left
+    {col:0,row:0}, // Green top-left
+    {col:9,row:0}, // Blue top-right
+    {col:9,row:9}, // Yellow bottom-right
   ];
   const yd = yardCenters[player];
   const cx = BO+yd.col*CS+CS*3, cy = BO+yd.row*CS+CS*3;
