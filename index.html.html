@@ -881,7 +881,7 @@ const BW = 15*CS + BO*2; // board width = 542px
 const LUDO = {
   COLORS: ['#e74c3c','#27ae60','#2980b9','#f39c12'],
   NAMES:  ['Red','Green','Blue','Yellow'],
-  SAFE_CELLS: [1,9,14,22,27,35,40,48],
+  SAFE_CELLS: [0,8,13,21,26,34,39,47],
   HOME_COLS:  ['#ffcccc','#ccffcc','#cce0ff','#fff3cc'],
   HOME_DARK:  ['#e74c3c','#27ae60','#2980b9','#f39c12'],
 };
@@ -912,9 +912,9 @@ let ludoState = {};
 // Red player (index 0) starts at step 0 = [6,13], circuit goes clockwise.
 // Each player's path uses this same loop, offset by 13 steps (ludoBoardCell).
 const LUDO_GRID_PATH = [
-  // Red quadrant (steps 0-12) — Red entry at [6,13], travels up & around to Green's start
-  [6,13],[6,12],[6,11],[6,10],[6,9],[6,8],   // 0-5  : col 6 going UP (6 cells incl. corner [6,8])
-  [5,8],[4,8],[3,8],[2,8],[1,8],[0,8],         // 6-11 : row 8 going LEFT (6 cells incl. edge [0,8])
+  // Red quadrant (steps 0-12) — Red entry at [6,14] (bottom edge, mirrors other colors' edge starts)
+  [6,14],[6,13],[6,12],[6,11],[6,10],[6,9],   // 0-5  : col 6 going UP from bottom edge (6 cells)
+  [5,8],[4,8],[3,8],[2,8],[1,8],[0,8],         // 6-11 : row 8 going LEFT (6 cells, diagonal jump like other quadrants)
   [0,7],                                        // 12   : col 0 turn cell
   // Green quadrant (steps 13-25) — Green entry at [0,6]
   [0,6],[1,6],[2,6],[3,6],[4,6],[5,6],         // 13-18: row 6 going RIGHT
@@ -1412,20 +1412,28 @@ function drawLudo(){
       if(row===7&&col>=1&&col<=6)  bg='#ccffcc'; // Green row lane (left)
       if(row===7&&col>=8&&col<=13) bg='#fff3cc'; // Yellow row lane (right)
 
-      // Safe star cells (highlight)
-      // 8 safe stars: 4 player entry cells + 4 traditional safe cells (8 steps after each entry on the ring)
-      const safeGridCells = [[6,13],[0,6],[8,0],[14,8], [4,8],[6,4],[11,6],[11,8]];
-      if(safeGridCells.some(([c,r])=>c===col&&r===row)) bg='#b8e0b8';
+      // Safe star cells — derived from LUDO.SAFE_CELLS. Each star is tinted
+      // with its own player's light color so Red, Green, Blue, Yellow all
+      // look equally "native" to their own quadrant (no color clashes).
+      const safeStarMap = {}; // "col,row" -> playerIdx
+      LUDO.SAFE_CELLS.forEach((idx, k) => {
+        const [c, r] = LUDO_GRID_PATH[idx];
+        safeStarMap[`${c},${r}`] = Math.floor(k / 2); // 2 stars per player, in order R,G,B,Y
+      });
+      const safeOwner = safeStarMap[`${col},${row}`];
+      const safeBgs   = ['#ffd6d6','#d6f5d6','#d6e6ff','#fff0c8']; // light R/G/B/Y
+      const safeStarCol = ['rgba(180,30,30,0.7)','rgba(20,120,50,0.7)','rgba(30,90,180,0.7)','rgba(180,120,0,0.8)'];
+      if(safeOwner !== undefined) bg = safeBgs[safeOwner];
 
       ctx.fillStyle = bg;
       ctx.fillRect(x,y,CS,CS);
       ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=0.5;
       ctx.strokeRect(x,y,CS,CS);
 
-      // Safe star symbol
-      if(safeGridCells.some(([c,r])=>c===col&&r===row)){
-        ctx.fillStyle='rgba(0,120,0,0.5)';
-        ctx.font=`${CS*0.5}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      // Safe star symbol — colored to match its player
+      if(safeOwner !== undefined){
+        ctx.fillStyle = safeStarCol[safeOwner];
+        ctx.font=`bold ${CS*0.55}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('★',x+CS/2,y+CS/2);
       }
     }
